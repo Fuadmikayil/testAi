@@ -6,13 +6,8 @@ import { v4 as uuidv4 } from "uuid";
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
-// Twilio webhook: Incoming voice call handler
-export async function POST(request: NextRequest) {
-  const formData = await request.formData();
-  const callerNumber = formData.get("From")?.toString() || "unknown";
-  const callSid = formData.get("CallSid")?.toString() || uuidv4();
-
-  const profile = getCallerProfile(callerNumber);
+function buildVoiceTwiml(callerNumber?: string) {
+  const profile = callerNumber ? getCallerProfile(callerNumber) : undefined;
   const greeting = profile?.name
     ? `Salam ${profile.name}! SmartTech Solutions-a yenidən xoş gəlmisiniz.`
     : "Salam! SmartTech Solutions-a xoş gəlmisiniz.";
@@ -40,8 +35,25 @@ export async function POST(request: NextRequest) {
     "Zəhmət olmasa nə axtardığınızı söyləyin."
   );
 
-  // If no input, redirect
   twiml.redirect("/api/twilio/voice");
+
+  return { twiml, greeting };
+}
+
+export async function GET() {
+  const { twiml } = buildVoiceTwiml();
+
+  return new NextResponse(twiml.toString(), {
+    headers: { "Content-Type": "text/xml" },
+  });
+}
+
+// Twilio webhook: Incoming voice call handler
+export async function POST(request: NextRequest) {
+  const formData = await request.formData();
+  const callerNumber = formData.get("From")?.toString() || "unknown";
+  const callSid = formData.get("CallSid")?.toString() || uuidv4();
+  const { twiml, greeting } = buildVoiceTwiml(callerNumber);
 
   // Log the call start
   addCallLog({

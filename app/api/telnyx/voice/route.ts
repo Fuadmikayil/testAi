@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const TELNYX_API_KEY = process.env.TELNYX_API_KEY!;
-
 async function callAction(callControlId: string, action: string, body: object = {}) {
+  const telnyxApiKey = process.env.TELNYX_API_KEY;
+  if (!telnyxApiKey) {
+    return;
+  }
+
   await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/${action}`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${TELNYX_API_KEY}`,
+      Authorization: `Bearer ${telnyxApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),

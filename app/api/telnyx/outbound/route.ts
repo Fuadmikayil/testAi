@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const TELNYX_API_KEY = process.env.TELNYX_API_KEY!;
-const TELNYX_PHONE_NUMBER = process.env.TELNYX_PHONE_NUMBER!;
 const CONNECTION_ID = "2928078981548738140";
 
 export async function POST(request: NextRequest) {
+  const telnyxApiKey = process.env.TELNYX_API_KEY;
+  const telnyxPhoneNumber = process.env.TELNYX_PHONE_NUMBER;
+
+  if (!telnyxApiKey) {
+    return NextResponse.json(
+      { error: "TELNYX_API_KEY .env.local faylında boşdur" },
+      { status: 500 }
+    );
+  }
+
+  if (!telnyxPhoneNumber) {
+    return NextResponse.json(
+      { error: "TELNYX_PHONE_NUMBER .env.local faylında boşdur" },
+      { status: 500 }
+    );
+  }
+
   const body = await request.json();
   const to: string = body.to;
 
@@ -17,13 +32,13 @@ export async function POST(request: NextRequest) {
   const res = await fetch("https://api.telnyx.com/v2/calls", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${TELNYX_API_KEY}`,
+      Authorization: `Bearer ${telnyxApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       connection_id: CONNECTION_ID,
       to,
-      from: TELNYX_PHONE_NUMBER,
+      from: telnyxPhoneNumber,
       webhook_url: webhookUrl,
       webhook_url_method: "POST",
     }),

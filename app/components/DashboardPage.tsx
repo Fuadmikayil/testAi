@@ -78,6 +78,33 @@ function RecentCallRow({ call }: { call: CallLog }) {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentCalls, setRecentCalls] = useState<CallLog[]>([]);
+  const [callNumber, setCallNumber] = useState("");
+  const [calling, setCalling] = useState(false);
+  const [callResult, setCallResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  async function startOutboundCall() {
+    if (!callNumber.trim()) return;
+    setCalling(true);
+    setCallResult(null);
+    try {
+      const res = await fetch("/api/telnyx/outbound", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: callNumber.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCallResult({ ok: true, msg: "Zəng başladıldı! Nömrəniz tezliklə zənglə alacaq." });
+      } else {
+        setCallResult({ ok: false, msg: JSON.stringify(data.error || data) });
+      }
+    } catch {
+      setCallResult({ ok: false, msg: "Şəbəkə xətası" });
+    } finally {
+      setCalling(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/stats")
@@ -99,10 +126,59 @@ export default function DashboardPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted mt-1">
-          AI Voice Response System — Real-time overview
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted mt-1">AI Voice Response System — Real-time overview</p>
+          </div>
+          <button
+            onClick={() => { setShowModal(true); setCallResult(null); }}
+            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors"
+          >
+            <Phone className="w-4 h-4" />
+            Zəng et
+          </button>
+        </div>
+
+        {/* Outbound Call Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-xl">
+              <h2 className="text-lg font-bold mb-1">Satış Zəngi Başlat</h2>
+              <p className="text-sm text-muted mb-4">
+                Daxil etdiyiniz nömrəyə AI satış agenti zəng edəcək.
+              </p>
+              <input
+                type="tel"
+                placeholder="+994xxxxxxxxx"
+                value={callNumber}
+                onChange={(e) => setCallNumber(e.target.value)}
+                className="w-full border border-border rounded-lg px-4 py-2.5 mb-4 bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {callResult && (
+                <div className={`text-sm rounded-lg px-4 py-3 mb-4 ${callResult.ok ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
+                  {callResult.msg}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={startOutboundCall}
+                  disabled={calling || !callNumber.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors"
+                >
+                  <Phone className="w-4 h-4" />
+                  {calling ? "Zənglənir..." : "Zəng et"}
+                </button>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 bg-muted/20 hover:bg-muted/30 text-foreground font-semibold py-2.5 rounded-lg transition-colors"
+                >
+                  Bağla
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}
